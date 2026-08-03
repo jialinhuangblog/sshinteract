@@ -1,0 +1,331 @@
+:root {
+  color-scheme: dark;
+  --ground: #22232d;
+  --panel: #282a36;
+  --panel2: #2f313f;
+  --term: #1e1f29;
+  --line: #3b3d4d;
+  --ink: #f8f8f2;
+  --dim: #9fa3b5;
+  --faint: #6272a4;
+  --ca: #bd93f9;
+  --client: #ff79c6;
+  --alice: #ff79c6;
+  --bob: #50fa7b;
+  --server: #8be9fd;
+  --accent: #ff79c6;
+  --ok: #50fa7b;
+  --danger: #ff5555;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; }
+html, body { background: var(--ground); color: var(--ink); font-family: var(--sans); overflow: hidden; }
+/* a real height, not a minimum: with min-height the terminals grow the page
+   instead of scrolling inside themselves, and a long mode runs off the bottom */
+body { padding: 18px clamp(16px, 2.5vw, 40px) 16px; height: 100dvh; display: flex; flex-direction: column; }
+@supports not (height: 100dvh) { body { height: 100vh; } }
+
+/* ---- compact header ---- */
+.top { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+.top h1 { font-size: 17px; font-weight: 600; font-family: var(--mono); }
+.top h1 .dollar { color: var(--accent); }
+.top .intro { color: var(--faint); font-size: 12.5px; }
+.tabs { display: flex; gap: 6px; margin-left: auto; }
+.tab {
+  font: 12px/1 var(--mono); color: var(--dim);
+  background: var(--panel); border: 1px solid var(--line); border-radius: 4px;
+  padding: 8px 13px; cursor: pointer;
+}
+.tab:hover { color: var(--ink); }
+.tab.on { color: var(--ground); background: var(--accent); border-color: var(--accent); font-weight: 700; }
+.modewrap { position: relative; }
+.modename {
+  font: 700 12px/1 var(--mono); color: var(--ground); background: var(--accent);
+  border: 0; border-radius: 4px; padding: 10px 16px; min-width: 170px; text-align: center;
+  cursor: pointer;
+}
+.modemenu {
+  position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  z-index: 60; min-width: 200px; display: flex; flex-direction: column;
+  background: var(--panel2); border: 1px solid var(--line); border-radius: 6px;
+  padding: 4px; box-shadow: 0 14px 34px -12px rgba(0,0,0,.9);
+}
+/* display:flex above beats the UA's [hidden]{display:none} — restate it stronger */
+.modemenu[hidden] { display: none; }
+.modemenu button {
+  font: 12px/1 var(--mono); color: var(--dim); text-align: left;
+  background: none; border: 0; border-radius: 4px; padding: 10px 12px; cursor: pointer;
+}
+.modemenu button:hover { background: var(--panel); color: var(--ink); }
+.tab:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.langs { display: flex; gap: 4px; }
+.lang {
+  font: 10.5px/1 var(--mono); color: var(--faint);
+  background: none; border: 1px solid var(--line); border-radius: 4px;
+  padding: 7px 9px; cursor: pointer;
+}
+.lang:hover { color: var(--ink); }
+.lang.on { color: var(--ink); border-color: var(--dim); }
+
+/* ---- terminals fill the page ---- */
+.stage { position: relative; flex: 1; min-height: 0; display: flex; margin-top: 12px; }
+.terms { display: flex; gap: 14px; flex: 1; min-width: 0; min-height: 0; overflow-x: auto; }
+.termwin {
+  /* min-width floor: a base64 fingerprint in a collapsed column renders one
+     char per line (word-break: break-all with a ~1ch column). 16ch never lets
+     that happen; overflow-x on .terms scrolls the row if both floors don't fit */
+  flex: 1; min-width: 16ch; position: relative; display: flex; flex-direction: column;
+  border: 1px solid var(--line); border-radius: 6px;
+  transition: border-color .25s, box-shadow .25s;
+}
+.termwin.active-ca { border-color: var(--ca); box-shadow: 0 0 18px -8px var(--ca); }
+.termwin.active-client { border-color: var(--client); box-shadow: 0 0 18px -8px var(--client); }
+.termwin.active-alice { border-color: var(--alice); box-shadow: 0 0 18px -8px var(--alice); }
+.termwin.active-bob { border-color: var(--bob); box-shadow: 0 0 18px -8px var(--bob); }
+.termwin.active-server { border-color: var(--server); box-shadow: 0 0 18px -8px var(--server); }
+/* a column that stacks more than one terminal (ops page: alice over bob) */
+.termcol { display: flex; flex-direction: column; gap: 14px; flex: 1; min-width: 16ch; min-height: 0; }
+/* stacked terminals split the column's height and scroll inside, so a long
+   session in one of them never pushes the page. min-height:0 lets the flex
+   child shrink below its content; without it the column grows and the window
+   scrolls instead of the terminal */
+.termcol .termwin { flex: 1 1 0; min-height: 0; }
+.termbar {
+  display: flex; align-items: center; gap: 8px; padding: 9px 12px;
+  background: var(--panel2); border-bottom: 1px solid var(--line);
+  border-radius: 6px 6px 0 0;
+}
+.termbar .lamp { width: 8px; height: 8px; border-radius: 50%; }
+.lamp.who-ca { background: var(--ca); }
+.lamp.who-client { background: var(--client); }
+.lamp.who-alice { background: var(--alice); }
+.lamp.who-bob { background: var(--bob); }
+.lamp.who-server { background: var(--server); }
+.termbar .host { font: 11.5px var(--mono); }
+.host.who-ca { color: var(--ca); }
+.host.who-client { color: var(--client); }
+.host.who-alice { color: var(--alice); }
+.host.who-bob { color: var(--bob); }
+.host.who-server { color: var(--server); }
+.termbar .sub { font: 10px var(--mono); color: var(--faint); }
+.fsbtn {
+  margin-left: auto; font: 10.5px var(--mono); color: var(--dim);
+  background: var(--ground); border: 1px solid var(--line); border-radius: 3px;
+  padding: 4px 9px; cursor: pointer;
+}
+.fsbtn:hover { color: var(--ink); border-color: var(--dim); }
+.fsbtn .cnt { color: var(--ok); }
+.termbody {
+  background: var(--term); padding: 12px 14px; flex: 1; min-height: 0;
+  font: 13px/1.95 var(--mono); overflow: auto; cursor: pointer;
+  border-radius: 0 0 6px 6px;
+}
+.tline { white-space: pre-wrap; word-break: break-all; }
+.tline .prompt { font-weight: 700; }
+.prompt.who-ca { color: var(--ca); }
+.prompt.who-client { color: var(--client); }
+.prompt.who-server { color: var(--server); }
+.tline.out { color: var(--dim); }
+.tline.ok { color: var(--ok); }
+.cursor {
+  display: inline-block; width: 7px; height: 15px; background: var(--ink);
+  vertical-align: -2px; animation: blink 1s steps(1) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .cursor { animation: none; } }
+
+/* ---- commentary panel: floats free over the page ----
+   In flow it changed height every step and pushed the terminals around, which
+   was the whole complaint. Taken out of flow it costs no layout at all.
+   It starts at the stage's top-left and stays narrow so the fs panel
+   (top-right) is clear, but drag puts it anywhere on screen. */
+@keyframes bubin { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.note-panel {
+  position: fixed; z-index: 10;  /* fixed, so it drags across the whole screen; above the fs panel (9) since it is what you are reading, below the fs file popover (12) */
+  max-width: min(64ch, calc(100% - 230px));
+  opacity: .8; transition: opacity .18s;
+  background: var(--panel); border: 3px solid var(--line); border-radius: 6px;
+  padding: 12px 16px 13px;
+  box-shadow: 0 16px 40px -14px rgba(0,0,0,.95);
+  animation: bubin .3s ease;
+}
+.note-panel:hover { opacity: 1; }
+/* grab anywhere except the two text blocks, which stay selectable */
+.note-panel { cursor: grab; }
+.note-panel .bnote, .note-panel .btext { cursor: auto; }
+.note-panel.dragging { cursor: grabbing; opacity: 1; animation: none; user-select: none; }
+@media (prefers-reduced-motion: reduce) { .note-panel { animation: none; } }
+.note-panel.who-ca { border-color: var(--ca); }
+.note-panel.who-client { border-color: var(--client); }
+.note-panel.who-alice { border-color: var(--alice); }
+.note-panel.who-bob { border-color: var(--bob); }
+.note-panel.who-server { border-color: var(--server); }
+.note-panel .btitle { font: 700 11px var(--mono); letter-spacing: .06em; margin-bottom: 6px; }
+.note-panel.who-ca .btitle { color: var(--ca); }
+.note-panel.who-client .btitle { color: var(--client); }
+.note-panel.who-alice .btitle { color: var(--alice); }
+.note-panel.who-bob .btitle { color: var(--bob); }
+.note-panel.who-server .btitle { color: var(--server); }
+.note-panel .bnote {
+  font: 11px/1.7 var(--mono); color: var(--dim); white-space: pre-wrap; word-break: break-all;
+  background: var(--term); border: 1px solid var(--line); border-radius: 4px;
+  padding: 6px 9px; margin-bottom: 8px; max-width: 78ch;
+}
+.note-panel .btext { font-size: 13px; line-height: 1.7; color: var(--ink); max-width: 78ch; white-space: pre-line; }
+
+/* ---- fs panel: embedded at its terminal's top-right on every platform ---- */
+.fspop {
+  position: absolute; right: 8px; top: 42px; z-index: 9;
+  opacity: .8;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  padding: 9px 14px 10px 10px;
+  max-width: calc(100% - 16px);
+  box-shadow: 0 14px 34px -12px rgba(0,0,0,.9);
+  font: 11.5px/1.8 var(--mono);
+  animation: bubin .25s ease;
+}
+.fspop:hover { opacity: 1; }
+.fspop .fshead { display: flex; align-items: center; gap: 10px; padding: 0 2px 3px; }
+.fshead .ftitle { font-size: 10px; font-weight: 700; letter-spacing: .06em; }
+.fsminbtn {
+  margin-left: auto; font: 11px var(--mono); color: var(--dim);
+  background: none; border: 1px solid var(--line); border-radius: 3px;
+  padding: 0 7px; cursor: pointer; line-height: 1.5;
+}
+.fsminbtn:hover { color: var(--ink); border-color: var(--dim); }
+.fspop .dirline { color: var(--faint); padding: 1px 4px; }
+.fspop .dirline:not(:first-child) { margin-top: 5px; }
+.fline {
+  position: relative; padding: 1px 4px; border-radius: 3px; color: var(--ink);
+  display: flex; align-items: center; gap: 6px; cursor: default;
+}
+.fline .branch { color: var(--faint); white-space: pre; }
+.fline:hover, .fline:focus-within { background: var(--panel2); }
+.fline.new .fname-t { color: var(--ok); }
+.fline .tag {
+  font-size: 9px; letter-spacing: .05em; border-radius: 3px; padding: 1px 5px;
+  border: 1px solid var(--line); color: var(--dim); font-family: var(--sans); white-space: nowrap;
+}
+.fline .tag.private { color: var(--danger); border-color: #6b3a44; }
+.fline .tag.cert { color: var(--ca); border-color: #55486e; }
+.fline .tag.auto { color: var(--server); border-color: #3d5a66; }
+.fline .tag.manual { color: var(--client); border-color: #6b4a5e; }
+.fpop {
+  /* flies out to the LEFT of the fs panel — the panel hugs the terminal's
+     right edge, so leftward is where the room is */
+  /* position is set by JS on hover (side-picking + viewport clamp); this just
+     provides the box and hides it until :hover flips display */
+  display: none; position: fixed; z-index: 12;
+  background: var(--term); border: 1px solid var(--line); border-radius: 4px;
+  padding: 9px 12px; font: 10.5px/1.7 var(--mono); color: var(--dim);
+  /* pre-wrap, not pre: a shadow line is 88 characters and the box is 440px,
+     so without wrapping the tail is simply cut off past the edge */
+  white-space: pre-wrap; overflow-wrap: anywhere;
+  /* a fixed width, not max-width: with only max-width the box shrink-to-fits,
+     and overflow-wrap:anywhere lets that shrink all the way to 1ch (a shadow
+     line then stacks one char per line). width pins it so the text wraps inside */
+  width: min(84vw, 440px);
+  box-shadow: 0 8px 24px -8px rgba(0,0,0,.8);
+}
+.fline:hover .fpop, .fline:focus-within .fpop { display: block; }
+
+/* ---- compare page ---- */
+.compare { flex: 1; min-width: 0; overflow-y: auto; padding: 4px 2px 30px; }
+.compare h2 {
+  font: 700 11px var(--mono); letter-spacing: .14em; text-transform: uppercase;
+  color: var(--dim); margin: 24px 0 10px;
+}
+.compare h2:first-child { margin-top: 6px; }
+.compare .tblwrap { overflow-x: auto; }
+.compare table { border-collapse: collapse; font: 12.5px/1.6 var(--sans); min-width: 560px; }
+.compare th {
+  text-align: left; font: 700 10px var(--mono); letter-spacing: .1em; text-transform: uppercase;
+  color: var(--faint); padding: 6px 18px 6px 0; border-bottom: 1px solid var(--line);
+}
+.compare td { padding: 7px 18px 7px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.compare td.mono, .compare td:first-child { font-family: var(--mono); font-size: 12px; }
+.compare th.c, .compare td.c { text-align: center; padding-right: 14px; }
+.compare .yes { color: var(--ok); font-weight: 700; }
+.compare .no { color: var(--faint); }
+.compare .note { max-width: 78ch; font-size: 13px; line-height: 1.75; color: var(--ink); margin-top: 10px; }
+
+/* command reference: the command itself sets the column width, so it gets its
+   own cell rules rather than the shared td.mono */
+.compare .cmdtbl td.cmd { padding-right: 22px; min-width: 22ch; }
+.compare .cmdtbl td.cmd code {
+  font: 11.5px/1.6 var(--mono); color: var(--ink);
+  display: block; word-break: break-all;
+}
+.compare .cmdtbl td.cmd .who {
+  display: block; margin-top: 3px;
+  font: 9.5px var(--mono); letter-spacing: .06em; color: var(--faint);
+}
+.compare .cmdtbl td:last-child { max-width: 62ch; }
+
+/* ---- bottom bar: ← [step title] → ---- */
+.bar { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.bar button {
+  font: 14px var(--mono); color: var(--ink); background: var(--panel2);
+  border: 1px solid var(--line); border-radius: 4px; padding: 8px 14px; cursor: pointer;
+}
+.bar button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.bar button:disabled { opacity: .35; cursor: default; }
+.stepname { flex: 1; text-align: center; font: 13px var(--mono); color: var(--ink); min-width: 0; }
+.stepname .ph { color: var(--faint); }
+.progress { font: 11.5px var(--mono); color: var(--faint); }
+
+@media (max-width: 760px) {
+  body { padding-left: 12px; padding-right: 12px; }
+  /* stacked terminals do not fit in one screen height, so the column scrolls */
+  .terms { flex-direction: column; overflow-y: auto; }
+  /* no room to keep the fs panel clear; it sits above the note anyway (z 9 vs 8) */
+  .note-panel { max-width: calc(100% - 16px); }
+  /* keep their height instead of being squeezed flat by the scrolling column */
+  .termwin { flex: 0 0 auto; min-height: 240px; width: 100%; }
+  /* nothing printed yet → just the title bar, no empty black box */
+  .termwin.quiet { min-height: 0; }
+  .termwin.quiet .termbody { flex: 0 0 44px; min-height: 44px; }
+}
+
+/* ---- provenance panel: the i button next to the language switch ---- */
+.envbtn {
+  font: 700 11px/1 var(--mono); color: var(--faint);
+  background: none; border: 1px solid var(--line); border-radius: 50%;
+  width: 22px; height: 22px; cursor: pointer; align-self: center;
+}
+.envbtn:hover { color: var(--ink); border-color: var(--dim); }
+.envbtn[aria-expanded="true"] { color: var(--ground); background: var(--accent); border-color: var(--accent); }
+/* a scrim, so a click anywhere outside the card closes it */
+.envwrap {
+  position: fixed; inset: 0; z-index: 70;
+  background: rgba(0,0,0,.55);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: clamp(16px, 6vh, 70px) 16px; overflow-y: auto;
+}
+.envwrap[hidden] { display: none; }
+.envcard {
+  width: min(72ch, 100%);
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  padding: 18px 22px 20px;
+  box-shadow: 0 30px 70px -20px rgba(0,0,0,.95);
+  animation: bubin .22s ease;
+}
+@media (prefers-reduced-motion: reduce) { .envcard { animation: none; } }
+.envhead { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.envtitle {
+  font: 700 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--accent);
+}
+.envclose {
+  margin-left: auto; font: 15px var(--mono); color: var(--dim);
+  background: none; border: 1px solid var(--line); border-radius: 4px;
+  padding: 1px 9px; cursor: pointer;
+}
+.envclose:hover { color: var(--ink); border-color: var(--dim); }
+.envlead { font-size: 13px; line-height: 1.75; color: var(--ink); margin-bottom: 14px; }
+.envtbl { border-collapse: collapse; width: 100%; margin-bottom: 14px; }
+.envtbl td { padding: 5px 16px 5px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; vertical-align: top; }
+.envtbl td:first-child { color: var(--faint); white-space: nowrap; width: 1%; }
+.envtbl td.mono { font: 12px var(--mono); color: var(--ink); }
+.envnote { font-size: 12.5px; line-height: 1.75; color: var(--dim); margin-top: 10px; }
+

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ssh — five ways to log in</title>
+<link rel="stylesheet" href="styles.css?v=2a23569">
+</head>
+<body>
+
+<div class="top">
+  <h1><span class="dollar">$</span> <span id="h1text">ssh — five ways to log in</span></h1>
+  <span class="intro" id="intro"></span>
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <div class="langs" id="langs"></div>
+  <button class="envbtn" id="envbtn" aria-label="where this output came from" aria-expanded="false">i</button>
+</div>
+
+<div class="envwrap" id="envwrap" hidden></div>
+
+<div class="bar" id="bar">
+  <button id="prev" aria-label="previous step">←</button>
+  <span class="stepname" id="stepname"></span>
+  <button id="next" aria-label="next step">→</button>
+  <span class="progress" id="prog"></span>
+</div>
+
+<!-- the note floats over the terminals, so it needs a positioned parent that
+     render() never overwrites (it replaces #terms wholesale) -->
+<div class="stage">
+  <div class="note-panel" id="note" hidden></div>
+  <div class="terms" id="terms"></div>
+</div>
+
+<script src="data.js?v=2a23569"></script>
+<script src="main.js?v=2a23569"></script>
+</body>
+</html>
